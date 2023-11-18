@@ -1,0 +1,33 @@
+name: SemiPermadeathPlugin
+main: kakdoncheng.plugin.semipermadeath.SemiPermadeathPlugin
+version: 1.2.1
+api-version: 1.16
+author: kakdoncheng
+permissions:
+  semipermadeath.boomstick:
+    description: Permission for boomstick command
+    default: op
+  semipermadeath.flags:
+    description: Permission for any flag altering commands
+    default: op
+commands:
+  boomstick:
+    description: Gives user a Boomstick.
+    usage: /<command>
+    permission: semipermadeath.boomstick
+    permission-message: You do not have permission to use this command.
+  smallboomstick:
+    description: Gives user a Lesser Boomstick.
+    usage: /<command>
+    permission: semipermadeath.boomstick
+    permission-message: You do not have permission to use this command.
+  toggle:
+    description: Toggles a flag.
+    usage: /<command>
+    permission: semipermadeath.flags
+    permission-message: You do not have permission to use this command.
+  set:
+    description: Set a flag to a specific value.
+    usage: /<command>
+    permission: semipermadeath.flags
+    permission-message: You do not have permission to use this command.

@@ -1,0 +1,435 @@
+package havocpixel.entities.creatures;
+
+//import havocpixel.entities.Explosion;
+import havocpixel.entities.Fireball;
+import havocpixel.entities.items.RottenFlesh;
+import havocpixel.entities.items.ScrapMetal;
+import havocpixel.gfx.Animation;
+import havocpixel.gfx.Assets;
+import havocpixel.main.Handler;
+import havocpixel.util.Utils;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Rectangle;
+
+public class Incubus extends Imp{
+	private Animation death;
+	private boolean dying=false;
+	private int deathTick=0;
+	private int dy=0,t=0;
+	private float alpha=0.0F;
+	private boolean cloak=true;
+	public Incubus(Handler hdlr, float x, float y, String label0) {
+		super(hdlr, x, y, label0);
+		bounds.x = 8;
+		bounds.y = 10;
+		bounds.width = 15;
+		bounds.height = 21;
+		label=label0;
+		target="PLAYER";
+		speed=2;
+		damage=10;
+		
+		this.health=150;
+		maxHealth=150;
+		this.angry=true;
+		this.AC=0;
+		this.fleshy=true;
+		this.ghost=false;
+		this.ally=0;
+		this.spawning=false;
+		
+		death=new Animation(hdlr,200,Assets.iDeath);
+		// TODO Auto-generated constructor stub
+	}
+	int aTick=0,hj=0;
+	public void tick() {
+		lookForTarget();
+		if(t<480){
+			t++;
+		}else{
+			t=0;
+			dy--;
+		}
+		if(t%3==0){
+			if(t%60<30)
+				dy--;
+			else
+				dy++;
+		}
+		if(cloak){
+			if(alpha<0.11F){
+				alpha+=0.005F;
+			}else{
+				cloak=false;
+			}
+		}
+		if(dying){
+			if(health<-120){
+				active=false;
+				spawnGuts();
+				hdlr.$currentWorld().em.addEntity(new Gib(hdlr,this.x+9,this.y+9));
+				if(hdlr.$game().$FPS()<55)
+					return;
+				hdlr.$currentWorld().em.addEntity(new Gib(hdlr,this.x-9,this.y+9));
+			}
+			deathTick++;
+			if(hj<4){
+				hj=death.tick();
+			}
+			if(deathTick>180){
+				//active=false;
+			}
+			return;
+		}
+		stunTick++;
+		aTick++;
+		if(!targetIsActive())
+			this.target=new String("PLAYER");
+		if(aTick>2){
+			if(!attacking){
+				if(health<maxHealth)
+					health++;
+				aTick=0;
+			}
+		}
+		if(hurt){
+			aTick=0;
+			alpha=1.0F;
+			cloak=false;
+			attacking=false;
+			throwProjectile=false;
+			grenade=false;
+			if(damageTick<DL){
+				damageTick++;
+				return;
+			}else{
+				damageTick=0;
+				hurt=false;
+			}
+		}
+		//IMPLEMENT OFFENSIVE AI
+		if(angry&&!attacking&&!isStunned()){
+			if(Math.random()>0.98F){
+				Rectangle ar;
+				if(this.direction==0){
+					//down
+					ar=new Rectangle(32,100);
+					ar.x=(int)x;
+					ar.y=(int)y+height+60;
+				}else if(this.direction==1){
+					//right
+					ar=new Rectangle(100,32);
+					ar.x=(int)x+width+60;
+					ar.y=(int)y;
+				}else if(this.direction==2){
+					//up
+					ar=new Rectangle(32,100);
+					ar.x=(int)x;
+					ar.y=(int)y-160;
+				}else{
+					//left
+					ar=new Rectangle(100,32);
+					ar.x=(int)x-160;
+					ar.y=(int)y;
+				}
+				for(havocpixel.entities.Entity u:hdlr.$currentWorld().$entityManager().$entities()){
+					if(u.equals(this)||u.particle)
+						continue;
+					if(u.$collisionBounds(0,0).intersects(ar)&&(u.label.equals(this.target)||(!targetFound&&u.ally==1))){
+						attacking=true;
+						throwProjectile=true;
+						//if(Math.random()<0.1F)
+							//grenade=true;
+						return;
+					}
+				}
+			}
+			if(Math.random()>0.87F){
+				//simple offensive AI idea
+				//bigger sight/hearing rectangle;
+				//if player is within the rectangle go to the player's coordinate
+				
+				//check if the player is within any of the directions;
+				//if player intersects the rectangle for direction 0,
+				//	turn to direction 0&launch an attack;
+				int u1=20;
+				int thr=0,lim=20;
+				Rectangle ar0=new Rectangle(u1,u1),//down
+						ar1=new Rectangle(u1,u1),//right
+						ar2=new Rectangle(u1,u1),//up
+						ar3=new Rectangle(u1,u1),//left
+						cb=$collisionBounds(0,0);
+				//down
+				ar0.x=cb.x+cb.width/2-u1/2;
+				ar0.y=cb.y+cb.height;
+				//right
+				ar1.x=cb.x+cb.width;
+				ar1.y=cb.y-cb.height/2+u1/2;
+				//up
+				ar2.x=cb.x+cb.width/2-u1/2;
+				ar2.y=cb.y-u1;
+				//left
+				ar3.x=cb.x-u1;
+				ar3.y=cb.y-cb.height/2+u1/2;
+				for(havocpixel.entities.Entity e:hdlr.$currentWorld().$entityManager().$entities()){
+					if(e.equals(this)||e.particle)
+						continue;
+					if(e.$collisionBounds(0,0).intersects(ar0)){
+						if(e.label.equals(this.target)||(!targetFound&&e.ally==1)){
+							this.direction=0;
+							if(rndInt(lim)>thr)
+								attacking=true;
+							return;
+						}
+					}else if(e.$collisionBounds(0,0).intersects(ar1)){
+						if(e.label.equals(this.target)||(!targetFound&&e.ally==1)){
+							this.direction=1;
+							if(rndInt(lim)>thr)
+								attacking=true;
+							return;
+						}
+					}else if(e.$collisionBounds(0,0).intersects(ar2)){
+						if(e.label.equals(this.target)||(!targetFound&&e.ally==1)){
+							this.direction=2;
+							if(rndInt(lim)>thr)
+								attacking=true;
+							return;
+						}
+					}else if(e.$collisionBounds(0,0).intersects(ar3)){
+						if(e.label.equals(this.target)||(!targetFound&&e.ally==1)){
+							this.direction=3;
+							if(rndInt(10)>thr)
+								attacking=true;
+							return;
+						}
+					}
+						
+				}
+			}
+			
+		}
+		if(attack&&!isStunned()){
+			aTick=0;
+			alpha=1.0F;
+			cloak=false;
+			if(throwProjectile){
+				meleeCooldown=true;
+				hdlr.$currentWorld().em.addEntity(
+						new Fireball(hdlr,this.x,this.y,label,this.direction,true));
+				throwProjectile=false;
+				grenade=false;
+			}else{
+				attack();
+			}
+			attack=false;
+		}
+		if(armored){
+			su.tick();
+			sl.tick();
+			sd.tick();
+			sr.tick();
+			sui.tick();
+			sli.tick();
+			sdi.tick();
+			sri.tick();
+		}else{
+			su0.tick();
+			sl0.tick();
+			sd0.tick();
+			sr0.tick();
+			sui0.tick();
+			sli0.tick();
+			sdi0.tick();
+			sri0.tick();
+		}
+		
+		if(this.attacking){
+			asu.tick();
+			asl.tick();
+			asd.tick();
+			asu0.tick();
+			asl0.tick();
+			asd0.tick();
+			asr0.tick();
+			if(asr.tick()==2){
+				attack=true;
+			}
+			if(asr.tick()==0){
+				attacking=false;
+				meleeCooldown=false;
+			}
+			
+		}else{
+			//TEMPORARY FLAG IMPLEMENT AI
+			//checks to see whether target is in earshot; if so, will stupidly chase down target;
+			if(angry&&!attacking){
+				Rectangle ar1=new Rectangle((int)(this.x-224),(int)(this.y-224),480,480);
+				for(havocpixel.entities.Entity e:hdlr.$currentWorld().$entityManager().$entities()){
+					if(e.equals(this)||e.particle)
+						continue;
+					if(e.$collisionBounds(0,0).intersects(ar1)){
+						if(e.label.equals(this.target)||(!targetFound&&e.ally==1)){
+							int ex=(int)e.x,ey=(int)e.y,tx=(int)this.x,ty=(int)this.y;
+							xMove=0;
+							yMove=0;
+							if(ex>tx){
+								if(ex-tx==1)
+									xMove=1;
+								else
+									xMove=speed;
+							}else if(ex<tx){
+								if(ex-tx==-1)
+									xMove=-1;
+								else
+									xMove=-speed;
+							}
+							if(ey>(int)ty){
+								if(ey-ty==1)
+									yMove=1;
+								else
+									yMove=speed;
+							}else if(ey<ty){
+								if(ey-ty==-1)
+									yMove=-1;
+								else
+									yMove=-speed;
+							}
+							if(!isStunned())
+								move();
+							return;
+						}
+					}
+				}
+			}
+			if (moveTick<1) {
+				moveTick=rndInt(100);
+				xMove=0;
+				yMove=0;
+				int p=rndInt(5);
+				if (p==1) {
+					xMove=speed;
+				} else if (p==2) {
+					xMove=-speed;
+				} else if (p==3) {
+					yMove=speed;
+				} else if (p==4) {
+					yMove=-speed;
+				}
+			} else {
+				moveTick--;
+			}
+			if(!isStunned())
+				move();
+		}
+		//hdlr.$camera().centerOnEntity(this);
+	}
+	public void render(Graphics g) {
+		if(dying){
+			g.drawImage(death.$currentFrame(),
+					(int)(x-hdlr.$camera().$xOffset()),
+					(int)(y-hdlr.$camera().$yOffset()),
+					width,
+					height,null);
+			return;
+		}
+		renderHP(g);
+		if(hurt){
+			if(this.direction==0){
+				//down
+				g.drawImage(Assets.gu0,
+						(int)(x-hdlr.$camera().$xOffset()),(int)(y-hdlr.$camera().$yOffset())+dy,width,height,null);
+			}else if(this.direction==1){
+				//right
+				g.drawImage(Assets.gr0,
+						(int)(x-hdlr.$camera().$xOffset()),(int)(y-hdlr.$camera().$yOffset())+dy,width,height,null);
+			}else if(this.direction==2){
+				//up
+				g.drawImage(Assets.gu0,
+						(int)(x-hdlr.$camera().$xOffset()),(int)(y-hdlr.$camera().$yOffset())+dy,width,height,null);
+			}else{
+				//left
+				g.drawImage(Assets.gl0,
+						(int)(x-hdlr.$camera().$xOffset()),(int)(y-hdlr.$camera().$yOffset())+dy,width,height,null);
+			}
+			return;
+		}
+		if(attacking){
+			if(this.direction==0){
+				g.drawImage(Assets.gAd0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,
+						width,
+						height,null);
+			}else if(this.direction==1){
+				g.drawImage(Assets.gAr0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,
+						width,
+						height,null);
+			}else if(this.direction==2){
+				g.drawImage(Assets.gAu0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,
+						width,
+						height,null);
+			}else{
+				g.drawImage(Assets.gAl0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,
+						width,
+						height,null);
+			}
+		}else{
+			if(this.direction==0){
+				Utils.drawTranslucentImage(Assets.gd0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,alpha,
+						width,
+						height,g);
+			}else if(this.direction==1){
+				Utils.drawTranslucentImage(Assets.gr0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,alpha,
+						width,
+						height,g);
+			}else if(this.direction==2){
+				Utils.drawTranslucentImage(Assets.gu0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,alpha,
+						width,
+						height,g);
+			}else{
+				Utils.drawTranslucentImage(Assets.gl0,
+						(int)(x-hdlr.$camera().$xOffset()),
+						(int)(y-hdlr.$camera().$yOffset())+dy,alpha,
+						width,
+						height,g);
+			}
+		}
+	}
+	protected void renderHP(Graphics g){
+		if(!showHP)return;
+		if(health<maxHealth){
+			g.setColor(Color.BLACK);
+			g.drawRect((int)(x-hdlr.$camera().$xOffset()+4),(int)(y-hdlr.$camera().$yOffset()+dy-2),24,1);
+			g.setColor(Color.GREEN);
+			if(health>0)
+				g.drawRect((int)(x-hdlr.$camera().$xOffset()+4),(int)(y-hdlr.$camera().$yOffset()+dy-2),(int)(((float)(health)/(float)(maxHealth))*24),1);
+		}
+	}
+	public void die(){
+		//hdlr.$world().em.addEntity(new Explosion(hdlr,this.x-16,this.y-16,this.label));
+		if(!dying){
+			if(Math.random()<0.35F)
+				hdlr.$currentWorld().em.addEntity(new RottenFlesh(hdlr,x,y,1+(int)(Math.random()*3)));
+			hdlr.$currentWorld().em.addEntity(new ScrapMetal(hdlr,this.x,this.y,1));
+		}
+		dying=true;
+		this.ally=256;
+		this.label=new String("DEAD_CORPSE");
+		active=true;
+		
+	}
+}

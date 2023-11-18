@@ -1,0 +1,16 @@
+name: RefinedPufferfishSpigotPlugin
+main: kakdoncheng.plugin.refinedpufferfish.RefinedPufferfishSpigotPlugin
+author: kakdoncheng
+version: 0.4
+api-version: 1.16
+permissions:
+  refinedpufferfish.drugs:
+    description: Permission for drugs.
+    default: op
+commands:
+  getfuckedup:
+    description: Get fucked up.
+    usage: /<command>
+    permission: refinedpufferfish.drugs
+    permission-message: You do not have permission to use this command.
+

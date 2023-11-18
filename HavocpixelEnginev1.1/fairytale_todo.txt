@@ -1,0 +1,49 @@
+
+
+
+IMPORTANT CHANGES TO BE IMPLEMENTED ASAP:
+  Change camera & entity handling:
+    Change as follows:
+       Add tag for entities which signal camera focus
+       Always render and update entities that have camera focus
+       Update camera position first before rendering anything else
+
+  Adding new monsters/objects:
+    Corpse Trees,
+    Gelatinous Cubes,
+    Unarmed Zombies
+    
+
+  WarpPortal:
+    Stores an entity, teleports them anywhere they wish on a map
+    with little delay.
+    two locations, initial and final
+    delay
+    two different spriteworks
+    particale
+
+
+  In havocpixel.WorldManager:
+    Change teleportTo() method to changeWorld()
+    have the method only deal with changing the world
+    changing the game.$player() location should be done in the trigger method
+
+  Test the LeaveArea objects to see if they still work:
+    Test player & attach it to worlds
+
+  Make new worlds
+
+  Implement big creatures/greater demons:
+    textures will be bigger
+    smarter, multiple attack animations
+    may have special actions
+
+  Implement bosses:
+    textures will be bigger
+    actions will be the same, however, patterns of attack and movement are more complex
+    might change music
+    might have dialogue
+
+
+CHANGES TO COME LATER:
+  Use of LWJGL to render textures;

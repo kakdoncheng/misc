@@ -1,0 +1,387 @@
+//a Fairy Tale Mechanics
+
+//CORE MECHANICS
+the main change will be the usage of timelapse as the basis for duration elasped;
+effects & movement will be done by seconds elasped, not ticks.
+
+As such, there is only an FPS cap, there is no update rate cap.
+int $FPSCap();
+
+Random integers will come from a single prng the game initializes.
+double $randomDouble();
+int $randomInt();
+
+during each iteration of a game loop, the time elasped since the last loop is:
+double $dt();
+
+Important notes:
+Stable frame rate caps on a 60hz monitor are 30fps, 60fps, and 120fps.
+The game should not update any slower than 30fps, otherwise rendering glitches will occur.
+Any mechanic glitches due to slow updates is unknown at this time.
+
+
+
+
+
+//ENTITY MECHANICS
+
+There is only one master abstract entity class.
+Reverse polymorphism;
+What kind of entity an object is will be determined by booleans;
+boolean particle, object, creature, fleshy, projectile, ghost, item;
+
+Creatures are living, and can attack and get hurt as well as move.
+Objects are non-living, and can be damaged.
+Particles are non-living, and cannot be damaged or targeted in any way.
+Items are special particles that can be picked up by the player.
+Ghosts cannot collide with other enitities, but can collide with other ghosts.
+Projectiles can be hurt, but not targeted.
+Fleshy objects can bleed when crit.
+
+Reasoning is that entities can dynamically change between one kind of entity to another.
+Entities can also be more than one type.
+However, every entity can have their own internal variables/methods besides the main ones
+for the purpose of different behavior.
+
+Four main directions, determined by an enum;
+int 0=down, 1=right, 2=up, 3=left;
+
+location on screen, designated with a double variable;
+double x, y;
+
+hitboxes, defined by a Rectangle;
+Rectangle bounds;
+
+labels/names, for debug, defined as a String;
+String label;
+
+a target, defined as an Entity;
+Entity swornTarget;
+Entity target;
+
+a faction, defined as a enum;
+Faction faction;
+
+movement speed, defined as pixels per second;
+int speed;
+
+distance moved is:
+dx = speed * dt;
+
+hitpoints defined by integer variables;
+int maxHealth;
+int health;
+
+strength, as a bonus addition to damage, defined by an integer;
+int strength;
+
+Every entity will also have a variety of status booleans and can also
+store what armor and weapon they have to attack with.
+Every entity will also store their own animations & textures if applicable.
+
+armor defined by enum;
+Armor armor;
+
+weapon defined by enum;
+Weapon weapon;
+
+Every Entity must be able to express the required behaviors;
+although different types of entities will not use all of them;
+isIdle();
+update(double dt);
+render(Graphics2D g);
+move();
+attack();
+damage(Entity e);
+knockback(Entity e, speed);
+lookForTarget();
+die();
+etc.
+
+Default health for an Entity is 1000.
+Default speed is 120 pixels per second.
+Default strength is 0.
+
+At any time, an Entity can either be moving, getting knocked back, or attacking.
+An Entity is idle if it is doing none of the above.
+If they are dead, they can only idle.
+Entities cannot do more than one thing at a time.
+Each action has a set duration depending on how fast the entity prefers to be.
+By default, this duration is 0.0667 secs. (50 actions per second)
+
+Entities update in this order:
+if their health < 1, they will die.
+
+On death:
+the entity will turn into a corpse, 
+with a death animation if applicable.
+the entity will stop whatever it is doing on a death.
+
+if entity is attacking, moving, or getting knocked back,
+it will continue doing those things until the duration of the action expires.
+if an entity is currently attacking or moving, and is knocked back,
+the entity will immediately stop whatever it is doing, and get knocked back.
+
+entities can regenerate or decay health independent of actions.
+they can also be affected by other effects independant of actions.
+
+On a move:
+dx and dy is calculated based on where the entity wants to go and their speed;
+entity will face a direction suitable;
+entity will check for collisions into other entities and solid tiles;
+entity will move where applicable.
+entity should render a moving animation.
+
+On a knockback:
+entities will set the entity who knocked them back as their sworn target,
+unless that entity is themselves.
+entities will move similar to how they would move on their own, 
+however entities will preserve their direction when being knocked back.
+Immovable objects cannot be knocked back.
+
+On an attack:
+entity should be rendering their attack animation.
+entity will wait for correct frame in attacking animation.
+on the correct frame, 
+  if attacking with melee,
+    entities will damage ALL other entities it's weapon hitbox collides with.
+    entities should also knockback any entities it hits.
+  if attacking with ranged projectiles,
+    will launch a projectile in the suitable direction.
+
+if the entity is idle, 
+it will figure out another action to do:
+
+[AI] entity will attempt to find its target.
+if the target does not exist or is not in sight, 
+  first, default back to sworn target.
+  if sworn target does not exist,
+    try to find a suitable target to kill.
+    stop looking for a target.
+  if sworn target does exist,
+    if the sworn target is in sight,
+      sworn target is now the target.
+    otherwise,
+      try to find a suitable target to kill.
+
+trying to find a suitable target:
+  it will pick a target based on its faction.
+    and,
+  it must be within sight range.
+if no target is found, entity can choose to move randomly or idle.
+
+if entity is aggressive, 
+  if target is close enough, will attack with held weapon or ranged.
+  otherwise, will follow target.
+
+[PLAYER] entity will decide what to do based on keyboard input.
+Also, they can have other actions that [AI] cannot do. However,
+players can still only do one action at a time.
+
+Entities that are not creatures can and will behave much differently
+than mentioned above.
+
+Entities will render whatever they want to look like after they have finished 
+updating their current state.
+
+
+
+
+
+//FACTIONS
+Factions are how entities recognize friend from foe.
+There are also certain hierarchies in the game which determine who will hate who.
+During collateral damage, an entity might attack the offender instead, depending
+on the attacker's faction.
+
+Faction types:
+Unaligned,
+Human,
+Greater Demon,
+Lesser Demon,
+Possessed,
+Nature Spirit;
+
+Unaligned entities are neutral toward other factions. 
+Depending on the entity in question, most will not attack even when provoked.
+Animals & any lost spirits fall into this category.
+
+Humans are neutral toward other factions.
+Will not attack other Humans.
+The player is a Human.
+
+Greater Demons hate everyone who isnt a demon.
+Will attack other Greater and Lesser Demons when provoked.
+There are no Greater demons as of yet.
+
+Lesser Demons hate everyone who isnt a demon.
+Will not attack Greater Demons.
+Will attack other Lesser Demons when provoked.
+The Imp, Incubus, and Pinky are Lesser Demons.
+
+Possessed hate everyone else.
+Will attack each other when provoked.
+Skeletons, Renevants, Ghosts, and Possessed Humans are examples of possessed.
+
+Nature Spirits hate Demons and Possessed.
+Will not attack other Nature Spirits.
+
+All demons and possessed are aggressive towards the player by default.
+
+
+
+
+
+//DAMAGE MECHANICS
+
+//Armor enums
+Armor is how fragile an entity is. 
+
+Armor has an int value depending on how resistant to damage it is.
+int armor;
+
+Armor cannot go above 1000, 
+but can go below 0.
+
+There are various types an entity can have:
+Human Skin,
+Rotting Human Skin,
+Demon Skin,
+Keratin Plate,
+Leather Plate,
+Iron Plate,
+Chainmail,
+Berserker's Armor,
+etc.
+
+armor may also have effects in the future, such as having effects on speed and such
+
+
+//Weapon enums
+Weapons are what the entity uses to attack.
+For now, there can only be melee weapons.
+If the entity has the ability to make ranged attacks, it will do so indirectly through projectiles.
+Note that projectiles will also technically hold a weapon in order to do damage calculation.
+
+Weapons have an int value based on the MAX damage it can do, 
+as well as an armor penetration (AP) value:
+int maxDamage;
+int AP;
+
+Weapons also have a crit chance:
+int critChance;
+
+Weapons also will return a hit AOE as a Rectangle based on the entity size and direction:
+$AOE() or $AOEBounds();
+
+There is no limit to how much damage a weapon can do,
+though it cannot do any less than 0 damage.
+
+AP value cannot go above 1000,
+but can go below 0.
+
+There are various kinds of weapons an entity can hold:
+Unarmed,
+Claws/Talons,
+Wrought Iron Sword,
+Steel Sword,
+Axe,
+Zweihander,
+etc.
+
+Damage calculation is as follows:
+
+armor reduction due to AP is linear:
+effectiveArmor = armor * ((1000.0 - AP) / 1000.0)
+
+damage reduction due to armor is linear:
+damageMod = ((1000.0 - effectiveArmor) / 1000.0)
+
+note that weapons with AP do worse against entities with no armor, and vice versa:
+if AP < 0 && armor <= 0
+  damageMod = -((1000.0 - AP) / 1000.0);
+else if AP > 0 && armor <= 0
+  damageMod = ((1000.0 - AP) / 1000.0);
+
+damage = (strength + (maxDamage * 0.5) + (maxDamage * $randomDouble(0.5))) * damageMod;
+
+When a critical hit is done, the target entity will bleed out for a specified duration,
+if the entity is fleshy:
+crit = $randomDouble() < critChance;
+
+It is important to note that to properly balance weapons the following design guidelines
+are drawn up based on how real weapons actually do bodily harm based on two rules:
+
+AP is only a measure of how good a weapon is at puncturing things, including armor,
+  AND
+Weapons that disperse more energy/momentum into an object will do more damage to the object.
+
+Therefore:
+
+Weapons with higher AP will tend to do less physical damage;
+Weapons with lower AP will tend to do more physical damage;
+Blunt weapons will tend to have less AP;
+A weapon with more knockback will tend to have less AP;
+A weapon with more AP will knockback less;
+Razor-thin/Puncture weapons tend to have more AP; 
+Projectiles that move faster tend to have more AP;
+
+Heavier weapons tend to move slower, but deal more damage;
+Lighter weapons tend to be faster, but deal less damage;
+Unarmed/badly improvised weapons tend to do little damage;
+Well-sharpened weapons will tend to have a higher crit chance;
+Weapons with higher AP will tend to have a higher crit chance;
+
+
+
+
+
+//DIRECTIONS
+There are now eight relative directions,
+for the sake of movement mechanics.
+DOWN,
+DOWNRIGHT,
+RIGHT,
+UPRIGHT,
+UP,
+UPLEFT,
+LEFT,
+DOWNLEFT
+
+However, when rendering the entity, there are only four possible directions the entity
+can face:
+DOWN,
+RIGHT,
+UP,
+LEFT
+
+
+
+
+
+//Assets & Textures
+Textures will either use java.awt OR LWJGL/LWJGL3;
+For now, hardware accelerated BufferedImages are fast enough;
+
+Textures can be loaded from either external sources or 
+from within the jar file;
+Textures should be stored in a 1D/2D array with other Textures related to it;
+Worlds will be split up into tiles, 32x32, and stored as one big 2D texture array,
+based on which world it came from.
+
+Animations will also use the time lapse rule, i.e. FPS, not ticks.
+Animations should have a method to reset the internal timer, and,
+Animations should have a method to return the current frame.
+
+
+
+
+
+//Tiles & Worlds
+Worlds/Areas are made up of 32x32 tiles, assembled together to form a world of varying size;
+Worlds should not exceed 125x125 tiles due to memory constraints.
+Each world can have their own tileset to draw tiles from, or can draw from a universal tileset.
+Each world will have their own EntityManager to update and render onto the screen;
+the player will be shared amongst all the worlds.
+
+
